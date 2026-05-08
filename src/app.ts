@@ -1,0 +1,93 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import path from 'path';
+import fs from 'fs';
+
+import config from '@/config';
+import { generalLimiter } from '@/middleware/rateLimiter';
+import errorHandler from '@/middleware/errorHandler';
+
+import authRoutes from '@/routes/auth';
+import restaurantRoutes from '@/routes/restaurants';
+import orderRoutes from '@/routes/orders';
+import categoryRoutes from '@/routes/categories';
+import cartRoutes from '@/routes/cart';
+import driverRoutes from '@/routes/driver';
+import restaurantOwnerRoutes from '@/routes/restaurantOwner';
+import userRoutes from '@/routes/users';
+
+const app = express();
+
+// Security
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(cors({ origin: config.corsOrigin, credentials: true }));
+
+// Performance
+app.use(compression());
+
+// Logging
+if (config.isDev) {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Rate limiting
+app.use('/api/', generalLimiter);
+
+// Static files for uploads
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({
+    success: true,
+    message: 'Piki Food API is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+// Metrics endpoint (basic)
+app.get('/api/metrics', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      memory: process.memoryUsage(),
+      uptime: process.uptime(),
+      nodeVersion: process.version,
+      environment: config.nodeEnv,
+    },
+  });
+});
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/driver', driverRoutes);
+app.use('/api/restaurant-owner', restaurantOwnerRoutes);
+
+// 404 handler
+app.use((_req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
+
+// Error handler
+app.use(errorHandler);
+
+export default app;
