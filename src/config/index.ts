@@ -5,7 +5,7 @@ const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   isDev: process.env.NODE_ENV !== 'production',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:8081',
+  corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:8081').split(','),
 
   database: {
     url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/piki_food?schema=public',
