@@ -3,6 +3,11 @@ import jwt from 'jsonwebtoken';
 import config from '@/config';
 import prisma from '@/db/prisma';
 import { JwtPayload } from '@/middleware/auth';
+import { sendOtpEmail } from './email.service';
+import { sendOtpSms } from './sms.service';
+
+const isEmail = (contact: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+const sanitizePhone = (contact: string): string => contact.replace(/[\s-]/g, '');
 
 export const generateOtp = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -12,22 +17,49 @@ export const hashOtp = async (otp: string): Promise<string> => {
   return bcrypt.hash(otp, 10);
 };
 
-export const createOtpRecord = async (phone: string): Promise<string> => {
+export const createOtpRecord = async (contact: string, method: 'sms' | 'email'): Promise<string> => {
   const otp = generateOtp();
   const hashedOtp = await hashOtp(otp);
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  await prisma.user.upsert({
-    where: { phone },
-    update: { otpCode: hashedOtp, otpExpiresAt },
-    create: { phone, otpCode: hashedOtp, otpExpiresAt },
-  });
+  if (method === 'email' || isEmail(contact)) {
+    const email = contact.trim().toLowerCase();
+    await prisma.user.upsert({
+      where: { email },
+      update: { otpCode: hashedOtp, otpExpiresAt, email },
+      create: { email, name: '', otpCode: hashedOtp, otpExpiresAt },
+    });
+    await sendOtpEmail(email, otp);
+    if (config.isDev) console.log(`[DEV] OTP for ${email}: ${otp}`);
+  } else {
+    const phone = sanitizePhone(contact);
+    await prisma.user.upsert({
+      where: { phone },
+      update: { otpCode: hashedOtp, otpExpiresAt },
+      create: { phone, otpCode: hashedOtp, otpExpiresAt },
+    });
+    await sendOtpSms(phone, otp);
+    if (config.isDev) console.log(`[DEV] OTP for ${phone}: ${otp}`);
+  }
 
   return otp;
 };
 
-export const verifyOtpCode = async (phone: string, code: string): Promise<{ user: any; accessToken: string; refreshToken: string } | null> => {
-  const user = await prisma.user.findUnique({ where: { phone } });
+
+
+const findUserByContact = async (contact: string) => {
+  if (isEmail(contact)) {
+    return prisma.user.findUnique({ where: { email: contact } });
+  }
+  return prisma.user.findUnique({ where: { phone: contact } });
+};
+
+export const verifyOtpCode = async (
+  contact: string,
+  code: string,
+  name?: string,
+): Promise<{ user: any; accessToken: string; refreshToken: string } | null> => {
+  const user = await findUserByContact(contact);
   if (!user || !user.otpCode || !user.otpExpiresAt) return null;
 
   if (new Date() > user.otpExpiresAt) return null;
@@ -35,15 +67,18 @@ export const verifyOtpCode = async (phone: string, code: string): Promise<{ user
   const isValid = await bcrypt.compare(code, user.otpCode);
   if (!isValid) return null;
 
-  await prisma.user.update({
+  const updateData: any = { otpCode: null, otpExpiresAt: null };
+  if (name) updateData.name = name;
+
+  const updatedUser = await prisma.user.update({
     where: { id: user.id },
-    data: { otpCode: null, otpExpiresAt: null },
+    data: updateData,
   });
 
   const tokens = await generateTokens(user.id, user.role);
 
   return {
-    user: sanitizeUser(user),
+    user: sanitizeUser(updatedUser),
     ...tokens,
   };
 };

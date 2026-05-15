@@ -5,7 +5,7 @@ const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   isDev: process.env.NODE_ENV !== 'production',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:8081',
+  corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:8081').split(','),
 
   database: {
     url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/piki_food?schema=public',
@@ -20,6 +20,20 @@ const config = {
 
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
+  },
+
+  email: {
+    host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+    port: parseInt(process.env.EMAIL_PORT || '587', 10),
+    user: process.env.EMAIL_USER || '',
+    pass: process.env.EMAIL_PASS || '',
+    from: process.env.EMAIL_FROM || 'noreply@piki.food',
+  },
+
+  sms: {
+    username: process.env.AT_USERNAME || '',
+    apiKey: process.env.AT_API_KEY || '',
+    from: process.env.AT_FROM || '',
   },
 
   otp: {
@@ -44,4 +58,5 @@ const config = {
   },
 } as const;
 
+export type Config = typeof config;
 export default config;

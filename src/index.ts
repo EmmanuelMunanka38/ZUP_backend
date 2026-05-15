@@ -3,6 +3,7 @@ import app from '@/app';
 import config from '@/config';
 import prisma from '@/db/prisma';
 import { initializeSocket } from '@/socket';
+import 'module-alias/register';
 
 const server = http.createServer(app);
 
