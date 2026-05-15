@@ -114,7 +114,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 
     res.json({
       success: true,
-      data: { ...restaurant, menuItems },
+      data: { ...restaurant, menu: menuItems },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch restaurant' });

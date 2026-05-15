@@ -97,7 +97,7 @@ router.post('/', auth, role('customer'), validate(createOrderSchema), async (req
         deliveryAddress: deliveryAddress as any,
         estimatedDelivery,
       },
-      include: { items: true },
+      include: { items: true, restaurant: true },
     });
 
     await prisma.deliveryRequest.create({
@@ -153,7 +153,7 @@ router.get('/', auth, async (req: AuthRequest, res: Response): Promise<void> => 
 
     const orders = await prisma.order.findMany({
       where,
-      include: { items: true },
+      include: { items: true, restaurant: true },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -167,7 +167,7 @@ router.get('/:id', auth, async (req: AuthRequest, res: Response): Promise<void> 
   try {
     const order = await prisma.order.findUnique({
       where: { id: req.params.id as string },
-      include: { items: true },
+      include: { items: true, restaurant: true },
     });
 
     if (!order) {
@@ -272,7 +272,7 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
     const updated = await prisma.order.update({
       where: { id: req.params.id as string },
       data: updateData,
-      include: { items: true },
+      include: { items: true, restaurant: true },
     });
 
     if (status === 'confirmed') {
@@ -339,7 +339,7 @@ router.post('/:id/reorder', auth, role('customer'), async (req: AuthRequest, res
   try {
     const existingOrder = await prisma.order.findUnique({
       where: { id: req.params.id as string },
-      include: { items: true },
+      include: { items: true, restaurant: true },
     });
 
     if (!existingOrder) {
@@ -405,7 +405,7 @@ router.post('/:id/reorder', auth, role('customer'), async (req: AuthRequest, res
         deliveryAddress: deliveryAddress,
         estimatedDelivery,
       },
-      include: { items: true },
+      include: { items: true, restaurant: true },
     });
 
     await prisma.deliveryRequest.create({
