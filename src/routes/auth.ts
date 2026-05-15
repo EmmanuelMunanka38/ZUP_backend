@@ -8,13 +8,22 @@ import * as authService from '@/services/auth.service';
 
 const router = Router();
 
+const isEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+
+const contactField = z.string().min(1, 'Contact is required').refine(
+  (val) => isEmail(val) || /^\+?\d{7,15}$/.test(val.replace(/[\s-]/g, '')),
+  { message: 'Must be a valid email or phone number' },
+);
+
 const sendOtpSchema = z.object({
-  phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number format'),
+  contact: contactField,
+  method: z.enum(['sms', 'email']),
 });
 
 const verifyOtpSchema = z.object({
-  phone: z.string().min(1, 'Phone is required'),
+  contact: z.string().min(1, 'Contact is required'),
   code: z.string().length(4, 'Code must be 4 digits'),
+  name: z.string().min(1).max(100).optional(),
 });
 
 const refreshSchema = z.object({
@@ -30,9 +39,8 @@ const updateProfileSchema = z.object({
 
 router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: Response): Promise<void> => {
   try {
-    const { phone } = req.body;
-    const otp = await authService.createOtpRecord(phone);
-    console.log(`[DEV] OTP for ${phone}: ${otp}`);
+    const { contact, method } = req.body;
+    const otp = await authService.createOtpRecord(contact, method);
     res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -42,8 +50,8 @@ router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: R
 
 router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), async (req, res: Response): Promise<void> => {
   try {
-    const { phone, code } = req.body;
-    const result = await authService.verifyOtpCode(phone, code);
+    const { contact, code, name } = req.body;
+    const result = await authService.verifyOtpCode(contact, code, name);
 
     if (!result) {
       res.status(400).json({
