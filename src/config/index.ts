@@ -22,6 +22,20 @@ const config = {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },
 
+  email: {
+    host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+    port: parseInt(process.env.EMAIL_PORT || '587', 10),
+    user: process.env.EMAIL_USER || '',
+    pass: process.env.EMAIL_PASS || '',
+    from: process.env.EMAIL_FROM || 'noreply@piki.food',
+  },
+
+  sms: {
+    username: process.env.AT_USERNAME || '',
+    apiKey: process.env.AT_API_KEY || '',
+    from: process.env.AT_FROM || '',
+  },
+
   otp: {
     provider: process.env.OTP_PROVIDER || 'console',
   },
@@ -44,4 +58,5 @@ const config = {
   },
 } as const;
 
+export type Config = typeof config;
 export default config;
