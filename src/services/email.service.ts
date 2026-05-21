@@ -38,26 +38,52 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
   const t = await getTransporter();
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background-color: #fcf9f8; border-radius: 16px;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <div style="display: inline-block; width: 64px; height: 64px; background-color: #006d36; border-radius: 16px; line-height: 64px; font-size: 32px; margin-bottom: 8px;">🛵</div>
-        <h1 style="color: #006d36; font-size: 24px; margin: 0;">Piki Food</h1>
-      </div>
-      <h2 style="color: #1c1b1b; font-size: 20px; text-align: center;">Your Verification Code</h2>
-      <p style="color: #3d4a3e; text-align: center; font-size: 14px; line-height: 1.6;">
-        Use the code below to complete your verification. This code expires in 5 minutes.
-      </p>
-      <div style="background-color: #ffffff; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0; border: 1px solid #e5e2e1;">
-        <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #006d36;">${otp}</span>
-      </div>
-      <p style="color: #6b766c; text-align: center; font-size: 12px;">
-        If you didn't request this code, you can safely ignore this email.
-      </p>
-      <hr style="border: none; border-top: 1px solid #e5e2e1; margin: 24px 0;" />
-      <p style="color: #6b766c; text-align: center; font-size: 12px;">
-        &copy; ${new Date().getFullYear()} Piki Food. All rights reserved.
-      </p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
+  
+  <!-- Header / Brand -->
+  <div style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #e2e2e2;">
+    <span style="font-size: 24px; font-weight: 700; color: #006d36; letter-spacing: -0.5px;">Piki Food</span>
+  </div>
+
+  <!-- Content Title -->
+  <h1 style="font-size: 24px; font-weight: 500; color: #000000; margin: 0 0 24px 0; line-height: 1.2; letter-spacing: -0.3px;">
+    Here is your verification code
+  </h1>
+
+  <!-- Main Body Message -->
+  <p style="font-size: 16px; line-height: 24px; color: #333333; margin: 0 0 32px 0;">
+    Use the following 6-digit verification code to complete your request. This security code is strictly private and expires in 5 minutes.
+  </p>
+
+  <!-- Uber-Style OTP Content Block -->
+  <div style="background-color: #f3f3f3; padding: 24px; border-left: 4px solid #006d36; margin: 0 0 32px 0;">
+    <div style="font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #555555; margin-bottom: 8px;">
+      Verification Code
     </div>
+    <div style="font-size: 38px; font-weight: 700; color: #000000; letter-spacing: 4px; line-height: 1;">
+      ${otp}
+    </div>
+  </div>
+
+  <!-- Security Sub-note -->
+  <p style="font-size: 14px; line-height: 20px; color: #777777; margin: 0 0 40px 0;">
+    If you did not initiate this request, someone else may have typed your information by mistake. You can safely ignore this communication.
+  </p>
+
+  <!-- Divider Line -->
+  <hr style="border: none; border-top: 1px solid #e2e2e2; margin: 0 0 24px 0;" />
+
+  <!-- Footer Links & Copyright -->
+  <div style="font-size: 12px; line-height: 18px; color: #999999;">
+    <p style="margin: 0 0 12px 0;">
+      This is an automated operational notification message from Piki Food.
+    </p>
+    <p style="margin: 0;">
+      &copy; ${new Date().getFullYear()} Piki Food Inc. All rights reserved.
+    </p>
+  </div>
+
+</div>
   `;
 
   const info = await t.sendMail({
