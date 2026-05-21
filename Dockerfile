@@ -4,9 +4,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY prisma ./prisma
 RUN npm ci
 
-COPY prisma ./prisma
 RUN npx prisma generate
 
 COPY tsconfig.json ./
@@ -22,9 +22,9 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 piki
 
 COPY package.json package-lock.json ./
+COPY --from=builder /app/prisma ./prisma
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
