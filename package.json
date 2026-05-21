@@ -35,7 +35,7 @@
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^6.6.0",
-    "africastalking": "^0.7.9",
+    "africastalking": "^0.7.4",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.46.0",
     "compression": "^1.8.0",
@@ -48,7 +48,7 @@
     "jsonwebtoken": "^9.0.2",
     "module-alias": "^2.3.4",
     "morgan": "^1.10.0",
-    "nodemailer": "^6.9.16",
+    "nodemailer": "^8.0.7",
     "nodemon": "^3.1.14",
     "socket.io": "^4.8.1",
     "stripe": "^18.0.0",
@@ -66,7 +66,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-v8": "^4.1.6",
     "eslint": "^9.25.0",
     "eslint-config-prettier": "^10.1.0",
     "eslint-plugin-import": "^2.31.0",
@@ -75,7 +75,7 @@
     "supertest": "^7.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.6"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

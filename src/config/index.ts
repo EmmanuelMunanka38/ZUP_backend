@@ -56,6 +56,9 @@ const config = {
   fcm: {
     serverKey: process.env.FCM_SERVER_KEY || '',
   },
+  test:{
+    nodeEnv:process.env.NODE_ENV = 'test',
+  },
 } as const;
 
 export type Config = typeof config;

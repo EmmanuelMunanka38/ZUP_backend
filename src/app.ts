@@ -23,8 +23,27 @@ const app = express();
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // 1. In development, allow requests with no origin (like mobile apps, emulators, or Postman)
+      // 2. Or automatically allow any origin on your local development machine
+      if (config.isDev || !origin) {
+        return callback(null, true);
+      }
 
+      // 3. In production, strictly match against your .env CORS_ORIGIN array
+      if (config.corsOrigin.indexOf(origin) !== -1) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 // Performance
 app.use(compression());
 
