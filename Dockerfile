@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm npm install --include=dev
+RUN npm install --include=dev
 
 RUN npx prisma generate
 
