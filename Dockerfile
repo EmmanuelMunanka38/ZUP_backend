@@ -21,6 +21,7 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Ensure we create the system group and user properly
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 piki
 
@@ -36,7 +37,11 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# 🛠️ FIX: Pre-create the directory and transfer ownership to user piki
+# 🛠️ FIX 1: Change ownership of the ENTIRE /app folder to piki:nodejs
+# This prevents permission errors if Node packages or Prisma try to write cache/logs to /app
+RUN chown -R piki:nodejs /app
+
+# 🛠️ FIX 2: Create the uploads directory and ensure it is explicitly owned by piki
 RUN mkdir -p /app/uploads && chown -R piki:nodejs /app/uploads
 
 USER piki
