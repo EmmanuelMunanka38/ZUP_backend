@@ -8,7 +8,7 @@ const config = {
   corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:8081').split(','),
 
   database: {
-    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/piki_food?schema=public',
+    url: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_pkTWY5Da3hVI@ep-flat-tooth-aqzrujfq.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require',
   },
 
   jwt: {
