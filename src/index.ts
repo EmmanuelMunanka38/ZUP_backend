@@ -44,9 +44,11 @@ const shutdown = async (signal: string) => {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-start().catch((error) => {
-  console.error('Startup error:', error);
-  process.exit(1);
-});
+if (typeof require !== 'undefined' && require.main === module) {
+  start().catch((error) => {
+    console.error('Startup error:', error);
+    process.exit(1);
+  });
+}
 
 export { app, server };
