@@ -1,5 +1,5 @@
 import axios from 'axios';
-import config from '@/config';
+import config from '../config';
 
 function toInternationalFormat(phone: string): string {
   const digits = phone.replace(/\D/g, '');

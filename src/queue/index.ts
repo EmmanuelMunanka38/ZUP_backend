@@ -1,7 +1,7 @@
 import { Queue, Worker, Job } from 'bullmq';
-import config from '@/config';
-import prisma from '@/db/prisma';
-import { sendPushNotification } from '@/services/notification.service';
+import config from '../config';
+import prisma from '../db/prisma';
+import { sendPushNotification } from '../services/notification.service';
 
 const connection = { url: config.redis.url };
 

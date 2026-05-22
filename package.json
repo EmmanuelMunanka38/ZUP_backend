@@ -36,6 +36,7 @@
   "dependencies": {
     "@prisma/client": "^6.6.0",
     "africastalking": "^0.7.4",
+    "axios": "^1.5.0",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.46.0",
     "compression": "^1.8.0",

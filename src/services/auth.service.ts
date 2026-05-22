@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import config from '@/config';
-import prisma from '@/db/prisma';
-import { JwtPayload } from '@/middleware/auth';
+import config from '../config';
+import prisma from '../db/prisma';
+import { JwtPayload } from '../middleware/auth';
 import { sendOtpEmail } from './email.service';
 import { sendOtpSms } from './sms.service';
 

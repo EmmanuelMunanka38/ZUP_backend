@@ -1,9 +1,9 @@
 import 'module-alias/register';
 import http from 'http';
-import app from '@/app';
-import config from '@/config';
-import prisma from '@/db/prisma';
-import { initializeSocket } from '@/socket';
+import app from './app';
+import config from './config';
+import prisma from './db/prisma';
+import { initializeSocket } from './socket';
 
 const server = http.createServer(app);
 

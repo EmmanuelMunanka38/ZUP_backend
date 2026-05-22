@@ -6,18 +6,18 @@ import morgan from 'morgan';
 import path from 'path';
 import fs from 'fs';
 
-import config from '@/config';
-import { generalLimiter } from '@/middleware/rateLimiter';
-import errorHandler from '@/middleware/errorHandler';
+import config from './config';
+import { generalLimiter } from './middleware/rateLimiter';
+import errorHandler from './middleware/errorHandler';
 
-import authRoutes from '@/routes/auth';
-import restaurantRoutes from '@/routes/restaurants';
-import orderRoutes from '@/routes/orders';
-import categoryRoutes from '@/routes/categories';
-import cartRoutes from '@/routes/cart';
-import driverRoutes from '@/routes/driver';
-import restaurantOwnerRoutes from '@/routes/restaurantOwner';
-import userRoutes from '@/routes/users';
+import authRoutes from './routes/auth';
+import restaurantRoutes from './routes/restaurants';
+import orderRoutes from './routes/orders';
+import categoryRoutes from './routes/categories';
+import cartRoutes from './routes/cart';
+import driverRoutes from './routes/driver';
+import restaurantOwnerRoutes from './routes/restaurantOwner';
+import userRoutes from './routes/users';
 
 const app = express();
 

@@ -1,4 +1,4 @@
-import prisma from '@/db/prisma';
+import prisma from '../db/prisma';
 import crypto from 'crypto';
 
 export const generateOrderNumber = (): string => {
