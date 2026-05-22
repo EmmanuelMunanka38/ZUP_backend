@@ -11,7 +11,10 @@ RUN npx prisma generate
 
 COPY tsconfig.json ./
 COPY src ./src
-RUN npm run build
+
+# Allocate 4GB RAM to Node so tsc doesn't crash the container, then build
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN npx tsc && npx tsc-alias
 
 # ---- Production Stage ----
 FROM node:20-alpine AS runner
@@ -22,13 +25,16 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 piki
 
 COPY package.json package-lock.json ./
+# Copy over the prisma directory just in case you need migration files at runtime
 COPY --from=builder /app/prisma ./prisma
 RUN npm ci --omit=dev && npm cache clean --force
 
+# Copy the compiled JS files from the builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-RUN npx prisma generate
+# Copy BOTH the client engine and the generated types from the builder
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 USER piki
 
