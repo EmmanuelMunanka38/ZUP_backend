@@ -8,20 +8,13 @@ import * as authService from '../services/auth.service';
 
 const router = Router();
 
-const isEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-
-const contactField = z.string().min(1, 'Contact is required').refine(
-  (val) => isEmail(val) || /^\+?\d{7,15}$/.test(val.replace(/[\s-]/g, '')),
-  { message: 'Must be a valid email or phone number' },
-);
-
 const sendOtpSchema = z.object({
-  contact: contactField,
-  method: z.enum(['sms', 'email']),
+  email: z.string().email('Invalid email'),
+  phone: z.string().regex(/^\+?\d{7,15}$/, 'Invalid phone number'),
 });
 
 const verifyOtpSchema = z.object({
-  contact: z.string().min(1, 'Contact is required'),
+  email: z.string().email('Invalid email'),
   code: z.string().length(4, 'Code must be 4 digits'),
   name: z.string().min(1).max(100).optional(),
 });
@@ -39,8 +32,8 @@ const updateProfileSchema = z.object({
 
 router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: Response): Promise<void> => {
   try {
-    const { contact, method } = req.body;
-    const otp = await authService.createOtpRecord(contact, method);
+    const { email, phone } = req.body;
+    await authService.createOtpRecord(email, phone);
     res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -50,8 +43,8 @@ router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: R
 
 router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), async (req, res: Response): Promise<void> => {
   try {
-    const { contact, code, name } = req.body;
-    const result = await authService.verifyOtpCode(contact, code, name);
+    const { email, code, name } = req.body;
+    const result = await authService.verifyOtpCode(email, code, name);
 
     if (!result) {
       res.status(400).json({
@@ -89,7 +82,16 @@ router.get('/profile', auth, async (req: AuthRequest, res: Response): Promise<vo
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, phone: true, name: true, avatar: true, email: true, role: true, fcmToken: true, createdAt: true },
+      select: {
+        id: true,
+        phone: true,
+        name: true,
+        avatar: true,
+        email: true,
+        role: true,
+        fcmToken: true,
+        createdAt: true,
+      },
     });
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
@@ -113,7 +115,16 @@ router.put('/profile', auth, validate(updateProfileSchema), async (req: AuthRequ
     const user = await prisma.user.update({
       where: { id: req.userId },
       data,
-      select: { id: true, phone: true, name: true, avatar: true, email: true, role: true, fcmToken: true, createdAt: true },
+      select: {
+        id: true,
+        phone: true,
+        name: true,
+        avatar: true,
+        email: true,
+        role: true,
+        fcmToken: true,
+        createdAt: true,
+      },
     });
 
     res.json({ success: true, data: user });
