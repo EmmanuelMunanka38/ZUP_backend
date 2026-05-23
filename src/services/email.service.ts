@@ -15,6 +15,19 @@ async function getTransporter(): Promise<nodemailer.Transporter> {
     return transporter;
   }
 
+  if (config.email.mode === 'resend' && config.email.resendApiKey) {
+    transporter = nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass: config.email.resendApiKey,
+      },
+    });
+    return transporter;
+  }
+
   if (config.email.user && config.email.pass) {
     transporter = nodemailer.createTransport({
       host: config.email.host,
