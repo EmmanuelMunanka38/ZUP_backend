@@ -48,7 +48,7 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
 
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
-  
+
   <!-- Header / Brand -->
   <div style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #e2e2e2;">
     <span style="font-size: 24px; font-weight: 700; color: #006d36; letter-spacing: -0.5px;">Piki Food</span>
