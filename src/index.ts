@@ -4,6 +4,7 @@ import app from './app';
 import config from './config';
 import prisma from './db/prisma';
 import { initializeSocket } from './socket';
+import { startSmtpServer, stopSmtpServer } from './services/smtp-server.service';
 
 const server = http.createServer(app);
 
@@ -15,6 +16,10 @@ const start = async () => {
   try {
     await prisma.$connect();
     console.log('PostgreSQL connected');
+
+    if (config.email.mode === 'self-hosted') {
+      await startSmtpServer();
+    }
 
     server.listen(config.port, () => {
       console.log(`Piki Food API running on port ${config.port} (${config.nodeEnv})`);
@@ -29,6 +34,7 @@ const start = async () => {
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
   server.close(async () => {
+    await stopSmtpServer();
     await prisma.$disconnect();
     console.log('Server closed');
     process.exit(0);
@@ -40,7 +46,6 @@ const shutdown = async (signal: string) => {
     process.exit(1);
   }, 10000);
 };
-
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
