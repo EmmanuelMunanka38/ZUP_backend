@@ -6,6 +6,28 @@ let transporter: nodemailer.Transporter | null = null;
 async function getTransporter(): Promise<nodemailer.Transporter> {
   if (transporter) return transporter;
 
+  if (config.email.mode === 'self-hosted') {
+    transporter = nodemailer.createTransport({
+      host: 'localhost',
+      port: config.email.selfHostedPort,
+      ignoreTLS: true,
+    });
+    return transporter;
+  }
+
+  if (config.email.mode === 'resend' && config.email.resendApiKey) {
+    transporter = nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass: config.email.resendApiKey,
+      },
+    });
+    return transporter;
+  }
+
   if (config.email.user && config.email.pass) {
     transporter = nodemailer.createTransport({
       host: config.email.host,
@@ -39,7 +61,7 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
 
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
-  
+
   <!-- Header / Brand -->
   <div style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #e2e2e2;">
     <span style="font-size: 24px; font-weight: 700; color: #006d36; letter-spacing: -0.5px;">Piki Food</span>
@@ -94,7 +116,7 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
   });
 
   console.log(`[EMAIL] OTP sent to ${to} (messageId: ${info.messageId})`);
-  if (info.messageId) {
+  if (info.messageId && config.email.mode !== 'self-hosted') {
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
       console.log(`[EMAIL] Preview URL: ${previewUrl}`);

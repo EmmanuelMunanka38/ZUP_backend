@@ -3,22 +3,26 @@ import request from 'supertest';
 import app from '@/app';
 
 describe('Auth API (Integration)', () => {
+  const testEmail = 'test@example.com';
   const testPhone = '+255712000000';
 
   describe('POST /api/auth/send-otp', () => {
-    it('should return 400 for invalid phone', async () => {
-      const res = await request(app)
-        .post('/api/auth/send-otp')
-        .send({ phone: 'invalid' });
+    it('should return 400 for invalid email', async () => {
+      const res = await request(app).post('/api/auth/send-otp').send({ email: 'invalid', phone: testPhone });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
     });
 
-    it('should accept valid phone and return success', async () => {
-      const res = await request(app)
-        .post('/api/auth/send-otp')
-        .send({ phone: testPhone });
+    it('should return 400 for invalid phone', async () => {
+      const res = await request(app).post('/api/auth/send-otp').send({ email: testEmail, phone: 'invalid' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('should accept valid email and phone and return success', async () => {
+      const res = await request(app).post('/api/auth/send-otp').send({ email: testEmail, phone: testPhone });
 
       // 200 = success, 429 = rate limited, 500 = DB not available
       expect([200, 429, 500]).toContain(res.status);

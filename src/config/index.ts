@@ -8,7 +8,9 @@ const config = {
   corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:8081').split(','),
 
   database: {
-    url: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_pkTWY5Da3hVI@ep-flat-tooth-aqzrujfq.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require',
+    url:
+      process.env.DATABASE_URL ||
+      'postgresql://neondb_owner:npg_pkTWY5Da3hVI@ep-flat-tooth-aqzrujfq.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require',
   },
 
   jwt: {
@@ -23,11 +25,29 @@ const config = {
   },
 
   email: {
+    mode:
+      process.env.EMAIL_MODE ||
+      (process.env.RESEND_API_KEY
+        ? 'resend'
+        : process.env.EMAIL_RELAY_HOST && process.env.EMAIL_RELAY_USER
+          ? 'self-hosted'
+          : process.env.EMAIL_USER && process.env.EMAIL_PASS
+            ? 'smtp'
+            : 'self-hosted'),
     host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
     port: parseInt(process.env.EMAIL_PORT || '587', 10),
     user: process.env.EMAIL_USER || '',
     pass: process.env.EMAIL_PASS || '',
     from: process.env.EMAIL_FROM || 'noreply@piki.food',
+    selfHostedPort: parseInt(process.env.SELF_HOSTED_SMTP_PORT || '2525', 10),
+    selfHostedDomain: process.env.SELF_HOSTED_DOMAIN || 'piki.food',
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    relay: {
+      host: process.env.EMAIL_RELAY_HOST || '',
+      port: parseInt(process.env.EMAIL_RELAY_PORT || '587', 10),
+      user: process.env.EMAIL_RELAY_USER || '',
+      pass: process.env.EMAIL_RELAY_PASS || '',
+    },
   },
 
   sms: {
@@ -56,8 +76,8 @@ const config = {
   fcm: {
     serverKey: process.env.FCM_SERVER_KEY || '',
   },
-  test:{
-    nodeEnv:process.env.NODE_ENV = 'test',
+  test: {
+    nodeEnv: (process.env.NODE_ENV = 'test'),
   },
 } as const;
 
