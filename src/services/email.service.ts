@@ -6,6 +6,15 @@ let transporter: nodemailer.Transporter | null = null;
 async function getTransporter(): Promise<nodemailer.Transporter> {
   if (transporter) return transporter;
 
+  if (config.email.mode === 'self-hosted') {
+    transporter = nodemailer.createTransport({
+      host: 'localhost',
+      port: config.email.selfHostedPort,
+      ignoreTLS: true,
+    });
+    return transporter;
+  }
+
   if (config.email.user && config.email.pass) {
     transporter = nodemailer.createTransport({
       host: config.email.host,
@@ -94,7 +103,7 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
   });
 
   console.log(`[EMAIL] OTP sent to ${to} (messageId: ${info.messageId})`);
-  if (info.messageId) {
+  if (info.messageId && config.email.mode !== 'self-hosted') {
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
       console.log(`[EMAIL] Preview URL: ${previewUrl}`);
