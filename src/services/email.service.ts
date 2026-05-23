@@ -1,10 +1,32 @@
-import nodemailer from 'nodemailer';
+import axios from 'axios';
 import config from '../config';
 
-let transporter: nodemailer.Transporter | null = null;
+export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
+  if (config.email.mode === 'resend' && config.email.resendApiKey) {
+    const html = buildOtpHtml(otp);
+    const { data } = await axios.post(
+      'https://api.resend.com/emails',
+      {
+        from: `"Piki Food" <${config.email.from}>`,
+        to,
+        subject: 'Your Piki Food verification code',
+        html,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${config.email.resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 15000,
+      },
+    );
+    console.log(`[EMAIL] OTP sent to ${to} (id: ${data.id})`);
+    return;
+  }
 
-async function getTransporter(): Promise<nodemailer.Transporter> {
-  if (transporter) return transporter;
+  const nodemailer = await import('nodemailer');
+
+  let transporter;
 
   if (config.email.mode === 'self-hosted') {
     transporter = nodemailer.createTransport({
@@ -12,23 +34,7 @@ async function getTransporter(): Promise<nodemailer.Transporter> {
       port: config.email.selfHostedPort,
       ignoreTLS: true,
     });
-    return transporter;
-  }
-
-  if (config.email.mode === 'resend' && config.email.resendApiKey) {
-    transporter = nodemailer.createTransport({
-      host: 'smtp.resend.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: 'resend',
-        pass: config.email.resendApiKey,
-      },
-    });
-    return transporter;
-  }
-
-  if (config.email.user && config.email.pass) {
+  } else if (config.email.user && config.email.pass) {
     transporter = nodemailer.createTransport({
       host: config.email.host,
       port: config.email.port,
@@ -50,16 +56,21 @@ async function getTransporter(): Promise<nodemailer.Transporter> {
       },
     });
     console.log(`[EMAIL] Ethereal test account created: ${testAccount.user}`);
-    console.log(`[EMAIL] Preview URL: https://ethereal.email/login`);
   }
 
-  return transporter;
-}
+  const html = buildOtpHtml(otp);
+  const info = await transporter.sendMail({
+    from: `"Piki Food" <${config.email.from}>`,
+    to,
+    subject: 'Your Piki Food verification code',
+    html,
+  });
 
-export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
-  const t = await getTransporter();
+  console.log(`[EMAIL] OTP sent to ${to} (messageId: ${info.messageId})`);
+};
 
-  const html = `
+function buildOtpHtml(otp: string): string {
+  return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
 
   <!-- Header / Brand -->
@@ -107,19 +118,4 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
 
 </div>
   `;
-
-  const info = await t.sendMail({
-    from: `"Piki Food" <${config.email.from}>`,
-    to,
-    subject: 'Your Piki Food verification code',
-    html,
-  });
-
-  console.log(`[EMAIL] OTP sent to ${to} (messageId: ${info.messageId})`);
-  if (info.messageId && config.email.mode !== 'self-hosted') {
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`[EMAIL] Preview URL: ${previewUrl}`);
-    }
-  }
-};
+}
