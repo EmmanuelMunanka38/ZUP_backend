@@ -27,11 +27,13 @@ const config = {
   email: {
     mode:
       process.env.EMAIL_MODE ||
-      (process.env.EMAIL_RELAY_HOST && process.env.EMAIL_RELAY_USER
-        ? 'self-hosted'
-        : process.env.EMAIL_USER && process.env.EMAIL_PASS
-          ? 'smtp'
-          : 'self-hosted'),
+      (process.env.RESEND_API_KEY
+        ? 'resend'
+        : process.env.EMAIL_RELAY_HOST && process.env.EMAIL_RELAY_USER
+          ? 'self-hosted'
+          : process.env.EMAIL_USER && process.env.EMAIL_PASS
+            ? 'smtp'
+            : 'self-hosted'),
     host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
     port: parseInt(process.env.EMAIL_PORT || '587', 10),
     user: process.env.EMAIL_USER || '',
@@ -39,6 +41,7 @@ const config = {
     from: process.env.EMAIL_FROM || 'noreply@piki.food',
     selfHostedPort: parseInt(process.env.SELF_HOSTED_SMTP_PORT || '2525', 10),
     selfHostedDomain: process.env.SELF_HOSTED_DOMAIN || 'piki.food',
+    resendApiKey: process.env.RESEND_API_KEY || '',
     relay: {
       host: process.env.EMAIL_RELAY_HOST || '',
       port: parseInt(process.env.EMAIL_RELAY_PORT || '587', 10),
