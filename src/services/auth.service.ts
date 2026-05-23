@@ -27,7 +27,9 @@ export const createOtpRecord = async (email: string, phone: string): Promise<str
     create: { email: cleanEmail, phone: cleanPhone, name: '', otpCode: hashedOtp, otpExpiresAt },
   });
 
-  await sendOtpEmail(cleanEmail, otp);
+  sendOtpEmail(cleanEmail, otp).catch((err: any) => {
+    console.error(`[EMAIL] Failed to send OTP to ${cleanEmail}:`, err);
+  });
   if (config.isDev) console.log(`[DEV] OTP for ${cleanEmail}: ${otp}`);
 
   return otp;
