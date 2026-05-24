@@ -28,28 +28,6 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
     return;
   }
 
-  if (config.email.mode === 'resend' && config.email.resendApiKey) {
-    const html = buildOtpHtml(otp);
-    const { data } = await axios.post(
-      'https://api.resend.com/emails',
-      {
-        from: `"Piki Food" <${config.email.from}>`,
-        to,
-        subject: 'Your Piki Food verification code',
-        html,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${config.email.resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 15000,
-      },
-    );
-    console.log(`[EMAIL] OTP sent to ${to} (id: ${data.id})`);
-    return;
-  }
-
   const nodemailer = await import('nodemailer');
 
   let transporter;
