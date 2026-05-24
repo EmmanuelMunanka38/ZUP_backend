@@ -2,6 +2,32 @@ import axios from 'axios';
 import config from '../config';
 
 export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
+  if (config.email.mode === 'brevo' && config.email.brevoApiKey) {
+    const html = buildOtpHtml(otp);
+    const { data } = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: {
+          name: 'Piki Food',
+          email: config.email.from,
+        },
+        to: [{ email: to }],
+        subject: 'Your Piki Food verification code',
+        htmlContent: html,
+      },
+      {
+        headers: {
+          'api-key': config.email.brevoApiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        timeout: 15000,
+      },
+    );
+    console.log(`[EMAIL] OTP sent to ${to} (id: ${data.messageId})`);
+    return;
+  }
+
   if (config.email.mode === 'resend' && config.email.resendApiKey) {
     const html = buildOtpHtml(otp);
     const { data } = await axios.post(
