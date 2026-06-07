@@ -68,6 +68,9 @@ const config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     region: process.env.AWS_REGION || 'auto',
     bucket: process.env.AWS_BUCKET || '',
+    endpoint: process.env.S3_ENDPOINT || '',
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+    publicUrl: process.env.S3_PUBLIC_URL || '',
     publicUrl: process.env.STORAGE_PUBLIC_URL || '',
   },
 
