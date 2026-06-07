@@ -17,7 +17,6 @@ const verifyOtpSchema = z.object({
   email: z.string().email('Invalid email'),
   code: z.string().length(4, 'Code must be 4 digits'),
   name: z.string().min(1).max(100).optional(),
-  rememberMe: z.boolean().optional(),
 });
 
 const refreshSchema = z.object({
@@ -36,11 +35,7 @@ router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: R
     const { email, phone } = req.body;
     await authService.createOtpRecord(email, phone);
     res.json({ success: true, message: 'OTP sent successfully' });
-  } catch (error: any) {
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ success: false, message: error.message });
-      return;
-    }
+  } catch (error) {
     console.error('Send OTP error:', error);
     res.status(500).json({ success: false, message: 'Failed to send OTP' });
   }
@@ -48,8 +43,8 @@ router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: R
 
 router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), async (req, res: Response): Promise<void> => {
   try {
-    const { email, code, name, rememberMe } = req.body;
-    const result = await authService.verifyOtpCode(email, code, name, rememberMe);
+    const { email, code, name } = req.body;
+    const result = await authService.verifyOtpCode(email, code, name);
 
     if (!result) {
       res.status(400).json({

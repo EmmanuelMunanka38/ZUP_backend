@@ -63,15 +63,13 @@ const config = {
 
   storage: {
     provider: process.env.STORAGE_PROVIDER || 'local',
-    endpoint: process.env.STORAGE_ENDPOINT || '',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    region: process.env.AWS_REGION || 'auto',
+    region: process.env.AWS_REGION || 'us-east-1',
     bucket: process.env.AWS_BUCKET || '',
     endpoint: process.env.S3_ENDPOINT || '',
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
     publicUrl: process.env.S3_PUBLIC_URL || '',
-    publicUrl: process.env.STORAGE_PUBLIC_URL || '',
   },
 
   fcm: {
