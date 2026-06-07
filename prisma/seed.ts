@@ -6,7 +6,11 @@ const prisma = new PrismaClient();
 const categories = [
   { name: 'Pizza', icon: 'pizza', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38' },
   { name: 'Burger', icon: 'hamburger', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd' },
-  { name: 'African', icon: 'silverware-variant', image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19' },
+  {
+    name: 'African',
+    icon: 'silverware-variant',
+    image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19',
+  },
   { name: 'Chinese', icon: 'noodles', image: 'https://images.unsplash.com/photo-1525755662778-989d0524087e' },
   { name: 'Dessert', icon: 'cake-variant', image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b' },
   { name: 'Drinks', icon: 'cup-water', image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e' },
@@ -264,6 +268,7 @@ async function main() {
   // Create users
   const customer = await prisma.user.create({
     data: {
+      email: 'test.customer@piki.food',
       phone: '+255712000001',
       name: 'Juma Bakari',
       role: 'customer',
@@ -272,6 +277,7 @@ async function main() {
 
   const owner = await prisma.user.create({
     data: {
+      email: 'test.owner@piki.food',
       phone: '+255712000002',
       name: 'Mama Nila',
       role: 'restaurant_owner',
@@ -280,6 +286,7 @@ async function main() {
 
   const driver = await prisma.user.create({
     data: {
+      email: 'test.driver@piki.food',
       phone: '+255712000003',
       name: 'Khamisi Juma',
       role: 'driver',
@@ -608,6 +615,7 @@ async function main() {
   // Create an admin user
   await prisma.user.create({
     data: {
+      email: 'test.admin@piki.food',
       phone: '+255712000000',
       name: 'Admin User',
       role: 'admin',
@@ -618,10 +626,10 @@ async function main() {
 
   console.log('\n✅ Seed completed successfully!');
   console.log('\n📱 Test credentials:');
-  console.log('  Admin:   phone +255712000000');
-  console.log('  Customer: phone +255712000001');
-  console.log('  Owner:    phone +255712000002');
-  console.log('  Driver:   phone +255712000003');
+  console.log('  Admin:    email=test.admin@piki.food    phone=+255712000000');
+  console.log('  Customer: email=test.customer@piki.food phone=+255712000001');
+  console.log('  Owner:    email=test.owner@piki.food    phone=+255712000002');
+  console.log('  Driver:   email=test.driver@piki.food   phone=+255712000003');
 }
 
 main()
