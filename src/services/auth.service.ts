@@ -45,6 +45,7 @@ export const verifyOtpCode = async (
   email: string,
   code: string,
   name?: string,
+  rememberMe?: boolean,
 ): Promise<{ user: any; accessToken: string; refreshToken: string } | null> => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.otpCode || !user.otpExpiresAt) return null;
@@ -62,7 +63,7 @@ export const verifyOtpCode = async (
     data: updateData,
   });
 
-  const tokens = await generateTokens(user.id, user.role);
+  const tokens = await generateTokens(user.id, user.role, rememberMe);
 
   return {
     user: sanitizeUser(updatedUser),
@@ -73,13 +74,19 @@ export const verifyOtpCode = async (
 export const generateTokens = async (
   userId: string,
   role: string,
+  rememberMe?: boolean,
 ): Promise<{ accessToken: string; refreshToken: string }> => {
   const accessToken = jwt.sign({ userId, role } as JwtPayload, config.jwt.accessSecret, {
     expiresIn: config.jwt.accessExpiresIn as any,
   });
 
-  const refreshToken = jwt.sign({ userId, role } as JwtPayload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn as any,
+  const refreshPayload: JwtPayload = { userId, role };
+  if (rememberMe) refreshPayload.rememberMe = true;
+
+  const refreshExpiry = rememberMe ? config.jwt.rememberExpiresIn : config.jwt.refreshExpiresIn;
+
+  const refreshToken = jwt.sign(refreshPayload, config.jwt.refreshSecret, {
+    expiresIn: refreshExpiry as any,
   });
 
   await prisma.user.update({
@@ -102,7 +109,7 @@ export const refreshAccessToken = async (
     const isValid = await bcrypt.compare(token, user.refreshToken);
     if (!isValid) return null;
 
-    return generateTokens(user.id, user.role);
+    return generateTokens(user.id, user.role, decoded.rememberMe);
   } catch {
     return null;
   }
