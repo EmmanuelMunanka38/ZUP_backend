@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import config from '../config';
 import prisma from '../db/prisma';
 import { JwtPayload } from '../middleware/auth';
@@ -13,19 +14,51 @@ export const hashOtp = async (otp: string): Promise<string> => {
   return bcrypt.hash(otp, 10);
 };
 
+const detectRole = (phone: string): { role: 'customer' | 'driver' | 'restaurant_owner'; cleanPhone: string } => {
+  if (phone.startsWith('D+255') || phone.startsWith('D07') || phone.startsWith('D06')) {
+    return { role: 'driver', cleanPhone: phone.slice(1) };
+  }
+  if (phone.startsWith('R')) {
+    return { role: 'restaurant_owner', cleanPhone: phone.slice(1) };
+  }
+  return { role: 'customer', cleanPhone: phone };
+};
+
 export const createOtpRecord = async (email: string, phone: string): Promise<string> => {
   const otp = generateOtp();
   const hashedOtp = await hashOtp(otp);
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   const cleanEmail = email.trim().toLowerCase();
-  const cleanPhone = phone.replace(/[\s-]/g, '');
+  const rawPhone = phone.replace(/[\s-]/g, '');
+  const { role, cleanPhone } = detectRole(rawPhone);
 
-  await prisma.user.upsert({
-    where: { email: cleanEmail },
-    update: { otpCode: hashedOtp, otpExpiresAt, phone: cleanPhone },
-    create: { email: cleanEmail, phone: cleanPhone, name: '', otpCode: hashedOtp, otpExpiresAt },
-  });
+  try {
+    await prisma.user.upsert({
+      where: { email: cleanEmail },
+      update: { otpCode: hashedOtp, otpExpiresAt },
+      create: { email: cleanEmail, phone: cleanPhone, name: '', role, otpCode: hashedOtp, otpExpiresAt },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const target = (error.meta?.target as string[])?.join(', ');
+      if (target?.includes('phone')) {
+        const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
+        if (existing) {
+          await prisma.user.update({
+            where: { id: existing.id },
+            data: { otpCode: hashedOtp, otpExpiresAt },
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
 
   sendOtpEmail(cleanEmail, otp).catch((err: any) => {
     console.error(`[EMAIL] Failed to send OTP to ${cleanEmail}:`, err);
@@ -40,7 +73,8 @@ export const verifyOtpCode = async (
   code: string,
   name?: string,
 ): Promise<{ user: any; accessToken: string; refreshToken: string } | null> => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const cleanEmail = email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
   if (!user || !user.otpCode || !user.otpExpiresAt) return null;
 
   if (new Date() > user.otpExpiresAt) return null;
