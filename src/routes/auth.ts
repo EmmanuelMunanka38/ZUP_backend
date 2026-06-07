@@ -35,7 +35,11 @@ router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: R
     const { email, phone } = req.body;
     await authService.createOtpRecord(email, phone);
     res.json({ success: true, message: 'OTP sent successfully' });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.statusCode) {
+      res.status(error.statusCode).json({ success: false, message: error.message });
+      return;
+    }
     console.error('Send OTP error:', error);
     res.status(500).json({ success: false, message: 'Failed to send OTP' });
   }

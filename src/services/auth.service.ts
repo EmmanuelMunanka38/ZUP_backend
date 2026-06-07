@@ -4,6 +4,7 @@ import config from '../config';
 import prisma from '../db/prisma';
 import { JwtPayload } from '../middleware/auth';
 import { sendOtpEmail } from './email.service';
+import { createError } from '../middleware/errorHandler';
 
 export const generateOtp = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -14,12 +15,17 @@ export const hashOtp = async (otp: string): Promise<string> => {
 };
 
 export const createOtpRecord = async (email: string, phone: string): Promise<string> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPhone = phone.replace(/[\s-]/g, '');
+
+  const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
+  if (existingUser) {
+    throw createError('Email already in use', 409);
+  }
+
   const otp = generateOtp();
   const hashedOtp = await hashOtp(otp);
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
-
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanPhone = phone.replace(/[\s-]/g, '');
 
   await prisma.user.upsert({
     where: { email: cleanEmail },
