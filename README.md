@@ -2,20 +2,6 @@
 
 Production-ready backend for the Piki Food delivery mobile app. Built with **Express + TypeScript + PostgreSQL + Prisma**.
 
-## Architecture
-
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Mobile App  │────▶│  Express API  │────▶│  PostgreSQL   │
-│  (Expo/RN)   │     │  (REST + WS)  │     │  (Prisma)     │
-└──────────────┘     └──────┬───────┘     └──────────────┘
-                            │
-                    ┌───────┴───────┐
-                    │   Redis       │
-                    │ (BullMQ+WS)   │
-                    └───────────────┘
-```
-
 ### Tech Stack
 
 | Component | Choice | Rationale |

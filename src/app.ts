@@ -18,6 +18,7 @@ import cartRoutes from './routes/cart';
 import driverRoutes from './routes/driver';
 import restaurantOwnerRoutes from './routes/restaurantOwner';
 import userRoutes from './routes/users';
+import uploadRoutes from './routes/upload';
 
 const app = express();
 
@@ -42,7 +43,7 @@ app.use(
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-  })
+  }),
 );
 // Performance
 app.use(compression());
@@ -100,6 +101,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/restaurant-owner', restaurantOwnerRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // 404 handler
 app.use((_req, res) => {

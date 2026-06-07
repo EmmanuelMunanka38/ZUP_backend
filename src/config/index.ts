@@ -63,10 +63,12 @@ const config = {
 
   storage: {
     provider: process.env.STORAGE_PROVIDER || 'local',
+    endpoint: process.env.STORAGE_ENDPOINT || '',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    region: process.env.AWS_REGION || 'us-east-1',
+    region: process.env.AWS_REGION || 'auto',
     bucket: process.env.AWS_BUCKET || '',
+    publicUrl: process.env.STORAGE_PUBLIC_URL || '',
   },
 
   fcm: {

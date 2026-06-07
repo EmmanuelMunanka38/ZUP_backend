@@ -1,3 +1,4 @@
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import config from '../config';
 import fs from 'fs';
 import path from 'path';
@@ -40,17 +41,49 @@ class LocalStorageProvider implements StorageProvider {
 }
 
 class S3StorageProvider implements StorageProvider {
-  // S3 implementation stub - configure with AWS SDK v3 when ready
-  async upload(key: string, _buffer: Buffer, _mimetype: string): Promise<string> {
-    return `https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/${key}`;
+  private client: S3Client;
+  private bucket: string;
+
+  constructor() {
+    this.bucket = config.storage.bucket;
+    this.client = new S3Client({
+      region: config.storage.region,
+      endpoint: config.storage.endpoint || undefined,
+      credentials: {
+        accessKeyId: config.storage.accessKeyId,
+        secretAccessKey: config.storage.secretAccessKey,
+      },
+      forcePathStyle: true,
+    });
   }
 
-  async delete(_key: string): Promise<void> {
-    // S3 delete implementation
+  async upload(key: string, buffer: Buffer, mimetype: string): Promise<string> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: mimetype,
+      }),
+    );
+    return this.getUrl(key);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
   }
 
   getUrl(key: string): string {
-    return `https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/${key}`;
+    if (config.storage.publicUrl) {
+      const base = config.storage.publicUrl.replace(/\/$/, '');
+      return `${base}/${key}`;
+    }
+    return `https://${this.bucket}.s3.${config.storage.region}.amazonaws.com/${key}`;
   }
 }
 
