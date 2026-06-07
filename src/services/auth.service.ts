@@ -5,6 +5,7 @@ import config from '../config';
 import prisma from '../db/prisma';
 import { JwtPayload } from '../middleware/auth';
 import { sendOtpEmail } from './email.service';
+import { createError } from '../middleware/errorHandler';
 
 export const generateOtp = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -25,6 +26,14 @@ const detectRole = (phone: string): { role: 'customer' | 'driver' | 'restaurant_
 };
 
 export const createOtpRecord = async (email: string, phone: string): Promise<string> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPhone = phone.replace(/[\s-]/g, '');
+
+  const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
+  if (existingUser) {
+    throw createError('Email already in use', 409);
+  }
+
   const otp = generateOtp();
   const hashedOtp = await hashOtp(otp);
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -59,6 +68,11 @@ export const createOtpRecord = async (email: string, phone: string): Promise<str
       throw error;
     }
   }
+  await prisma.user.upsert({
+    where: { email: cleanEmail },
+    update: { otpCode: hashedOtp, otpExpiresAt, phone: cleanPhone },
+    create: { email: cleanEmail, phone: cleanPhone, name: '', otpCode: hashedOtp, otpExpiresAt },
+  });
 
   sendOtpEmail(cleanEmail, otp).catch((err: any) => {
     console.error(`[EMAIL] Failed to send OTP to ${cleanEmail}:`, err);
@@ -72,6 +86,7 @@ export const verifyOtpCode = async (
   email: string,
   code: string,
   name?: string,
+  rememberMe?: boolean,
 ): Promise<{ user: any; accessToken: string; refreshToken: string } | null> => {
   const cleanEmail = email.trim().toLowerCase();
   const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
@@ -90,7 +105,7 @@ export const verifyOtpCode = async (
     data: updateData,
   });
 
-  const tokens = await generateTokens(user.id, user.role);
+  const tokens = await generateTokens(user.id, user.role, rememberMe);
 
   return {
     user: sanitizeUser(updatedUser),
@@ -101,13 +116,19 @@ export const verifyOtpCode = async (
 export const generateTokens = async (
   userId: string,
   role: string,
+  rememberMe?: boolean,
 ): Promise<{ accessToken: string; refreshToken: string }> => {
   const accessToken = jwt.sign({ userId, role } as JwtPayload, config.jwt.accessSecret, {
     expiresIn: config.jwt.accessExpiresIn as any,
   });
 
-  const refreshToken = jwt.sign({ userId, role } as JwtPayload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn as any,
+  const refreshPayload: JwtPayload = { userId, role };
+  if (rememberMe) refreshPayload.rememberMe = true;
+
+  const refreshExpiry = rememberMe ? config.jwt.rememberExpiresIn : config.jwt.refreshExpiresIn;
+
+  const refreshToken = jwt.sign(refreshPayload, config.jwt.refreshSecret, {
+    expiresIn: refreshExpiry as any,
   });
 
   await prisma.user.update({
@@ -130,7 +151,7 @@ export const refreshAccessToken = async (
     const isValid = await bcrypt.compare(token, user.refreshToken);
     if (!isValid) return null;
 
-    return generateTokens(user.id, user.role);
+    return generateTokens(user.id, user.role, decoded.rememberMe);
   } catch {
     return null;
   }

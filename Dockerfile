@@ -28,7 +28,7 @@ RUN adduser --system --uid 1001 piki
 COPY package.json package-lock.json ./
 # Copy over the prisma directory just in case you need migration files at runtime
 COPY --from=builder /app/prisma ./prisma
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --production --no-audit --no-fund && npm cache clean --force
 
 # Copy the compiled JS files from the builder
 COPY --from=builder /app/dist ./dist

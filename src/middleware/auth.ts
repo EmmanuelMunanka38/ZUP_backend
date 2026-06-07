@@ -6,6 +6,7 @@ import prisma from '../db/prisma';
 export interface JwtPayload {
   userId: string;
   role: string;
+  rememberMe?: boolean;
 }
 
 export interface AuthRequest extends Request {

@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import config from '../config';
 import fs from 'fs';
 import path from 'path';
@@ -52,12 +53,14 @@ class S3StorageProvider implements StorageProvider {
     this.bucket = config.storage.bucket;
     this.client = new S3Client({
       region: config.storage.region,
+      endpoint: config.storage.endpoint || undefined,
       credentials: {
         accessKeyId: config.storage.accessKeyId,
         secretAccessKey: config.storage.secretAccessKey,
       },
       endpoint: config.storage.endpoint || undefined,
       forcePathStyle: config.storage.forcePathStyle,
+      forcePathStyle: true,
     });
   }
 
@@ -85,6 +88,8 @@ class S3StorageProvider implements StorageProvider {
   getUrl(key: string): string {
     if (config.storage.publicUrl) {
       return `${config.storage.publicUrl}/${key}`;
+      const base = config.storage.publicUrl.replace(/\/$/, '');
+      return `${base}/${key}`;
     }
     return `https://${this.bucket}.s3.${config.storage.region}.amazonaws.com/${key}`;
   }

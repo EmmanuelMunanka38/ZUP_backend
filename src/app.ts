@@ -43,7 +43,7 @@ app.use(
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-  })
+  }),
 );
 // Performance
 app.use(compression());
@@ -70,6 +70,10 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // Health check
+app.all('/', (_req, res) => {
+  res.json({ success: true, message: 'Piki Food API is running' });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({
     success: true,

@@ -18,6 +18,7 @@ const config = {
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production',
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    rememberExpiresIn: process.env.JWT_REMEMBER_EXPIRES_IN || '28d',
   },
 
   redis: {
@@ -62,13 +63,15 @@ const config = {
 
   storage: {
     provider: process.env.STORAGE_PROVIDER || 'local',
+    endpoint: process.env.STORAGE_ENDPOINT || '',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    region: process.env.AWS_REGION || 'us-east-1',
+    region: process.env.AWS_REGION || 'auto',
     bucket: process.env.AWS_BUCKET || '',
     endpoint: process.env.S3_ENDPOINT || '',
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
     publicUrl: process.env.S3_PUBLIC_URL || '',
+    publicUrl: process.env.STORAGE_PUBLIC_URL || '',
   },
 
   fcm: {
