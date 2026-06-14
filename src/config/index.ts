@@ -14,8 +14,26 @@ const config = {
   },
 
   jwt: {
-    accessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-in-production',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production',
+    accessSecret: (() => {
+      const secret = process.env.JWT_ACCESS_SECRET;
+      if (!secret || secret === 'change-me-access-secret-at-least-32-chars') {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('JWT_ACCESS_SECRET must be set in production');
+        }
+        return 'dev-access-secret-change-in-production';
+      }
+      return secret;
+    })(),
+    refreshSecret: (() => {
+      const secret = process.env.JWT_REFRESH_SECRET;
+      if (!secret || secret === 'change-me-refresh-secret-at-least-32-chars') {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('JWT_REFRESH_SECRET must be set in production');
+        }
+        return 'dev-refresh-secret-change-in-production';
+      }
+      return secret;
+    })(),
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     rememberExpiresIn: process.env.JWT_REMEMBER_EXPIRES_IN || '28d',
@@ -67,9 +85,8 @@ const config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     region: process.env.AWS_REGION || 'us-east-1',
     bucket: process.env.AWS_BUCKET || '',
-    endpoint: process.env.S3_ENDPOINT || '',
-    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
-    publicUrl: process.env.S3_PUBLIC_URL || '',
+    forcePathStyle: process.env.STORAGE_FORCE_PATH_STYLE === 'true',
+    publicUrl: process.env.STORAGE_PUBLIC_URL || '',
   },
 
   fcm: {

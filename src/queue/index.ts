@@ -31,10 +31,55 @@ const orderWorker = new Worker('orders', async (job: Job) => {
   const { type, orderId } = job.data;
 
   switch (type) {
-    case 'assign_driver':
-      // Stub: auto-assign driver logic
-      console.log(`[Queue] Auto-assigning driver for order ${orderId}`);
+    case 'assign_driver': {
+      try {
+        const order = await prisma.order.findUnique({
+          where: { id: orderId },
+          include: { restaurant: true },
+        });
+        if (!order || order.status === 'cancelled' || order.status === 'delivered') break;
+
+        const drivers = await prisma.user.findMany({
+          where: { role: 'driver' },
+          select: { id: true, fcmToken: true },
+        });
+
+        const existing = await prisma.deliveryRequest.findFirst({
+          where: { orderId, status: { in: ['available', 'accepted'] } },
+        });
+
+        if (!existing) {
+          await prisma.deliveryRequest.create({
+            data: {
+              orderId: order.id,
+              restaurant: {
+                name: order.restaurant.name,
+                address: order.restaurant.address,
+                lat: order.restaurant.latitude || 0,
+                lng: order.restaurant.longitude || 0,
+              },
+              customer: { name: '', phone: '' },
+              pickup: order.restaurant.address,
+              dropoff: typeof order.deliveryAddress === 'string' ? order.deliveryAddress : (order.deliveryAddress as any)?.street || '',
+              distance: parseFloat(order.restaurant.distance) || 0,
+              deliveryFee: order.deliveryFee,
+              items: [],
+              timeLeft: 30,
+              status: 'available',
+            },
+          });
+        }
+
+        for (const driver of drivers) {
+          if (driver.fcmToken) {
+            await sendPushNotification(driver.id, 'New Delivery Available', `Order #${order.orderNumber} needs pickup`);
+          }
+        }
+      } catch (error) {
+        console.error(`[Queue] Auto-assign error for ${orderId}:`, error);
+      }
       break;
+    }
     case 'timeout_cancel':
       // Cancel order if not confirmed within X minutes
       try {

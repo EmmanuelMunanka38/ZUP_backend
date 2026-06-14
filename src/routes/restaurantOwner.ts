@@ -29,7 +29,7 @@ router.get('/dashboard', auth, role('restaurant_owner'), async (req: AuthRequest
     const activeOrders = await prisma.order.findMany({
       where: {
         restaurantId: { in: restaurantIds },
-        status: { in: ['confirmed', 'preparing', 'on_the_way', 'arrived'] },
+        status: { in: ['restaurant_accepted', 'preparing', 'ready_for_pickup', 'driver_assigned', 'picked_up', 'on_the_way', 'arrived'] },
       },
     });
 

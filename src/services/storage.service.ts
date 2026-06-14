@@ -80,7 +80,6 @@ class S3StorageProvider implements StorageProvider {
 
   getUrl(key: string): string {
     if (config.storage.publicUrl) {
-      return `${config.storage.publicUrl}/${key}`;
       const base = config.storage.publicUrl.replace(/\/$/, '');
       return `${base}/${key}`;
     }

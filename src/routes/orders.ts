@@ -6,7 +6,7 @@ import role from '../middleware/role';
 import validate from '../middleware/validate';
 import * as orderService from '../services/order.service';
 import { sendPushNotification } from '../services/notification.service';
-import { emitOrderUpdate } from '../socket';
+import { emitOrderUpdate, emitToUser, emitToRole } from '../socket';
 
 const router = Router();
 
@@ -32,7 +32,7 @@ const createOrderSchema = z.object({
 });
 
 const updateStatusSchema = z.object({
-  status: z.enum(['confirmed', 'preparing', 'on_the_way', 'arrived', 'delivered']),
+  status: z.enum(['restaurant_accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way', 'arrived', 'delivered']),
 });
 
 router.post('/', auth, role('customer'), validate(createOrderSchema), async (req: AuthRequest, res: Response): Promise<void> => {
@@ -100,31 +100,11 @@ router.post('/', auth, role('customer'), validate(createOrderSchema), async (req
       include: { items: true, restaurant: true },
     });
 
-    await prisma.deliveryRequest.create({
-      data: {
-        orderId: order.id,
-        restaurant: {
-          name: restaurant.name,
-          address: restaurant.address,
-          image: restaurant.image,
-        },
-        customer: {
-          name: req.userId!,
-          address: `${deliveryAddress.street}, ${deliveryAddress.area}, ${deliveryAddress.city}`,
-        },
-        pickup: restaurant.address,
-        dropoff: `${deliveryAddress.street}, ${deliveryAddress.area}, ${deliveryAddress.city}`,
-        distance: parseFloat(restaurant.distance.replace(/[^0-9.]/g, '')) || 0,
-        deliveryFee,
-        items: orderItemsData.map((i: any) => `${i.quantity}x ${i.name}`),
-        timeLeft: 35,
-      },
-    });
-
     try {
       const owner = await prisma.user.findUnique({ where: { id: restaurant.ownerId } });
       if (owner) {
         await sendPushNotification(owner.id, 'New Order!', `New order #${orderNumber} received`);
+        emitToUser(owner.id, 'order:new', { orderId: order.id, orderNumber });
       }
     } catch { /* non-critical */ }
 
@@ -247,8 +227,8 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
         res.status(403).json({ success: false, message: 'You can only update orders for your own restaurant' });
         return;
       }
-      if (!['confirmed', 'preparing'].includes(status)) {
-        res.status(403).json({ success: false, message: 'Restaurant owners can only confirm or start preparing orders' });
+      if (!['restaurant_accepted', 'preparing', 'ready_for_pickup'].includes(status)) {
+        res.status(403).json({ success: false, message: 'Restaurant owners can only accept, prepare, or mark orders ready for pickup' });
         return;
       }
     }
@@ -258,7 +238,7 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
         res.status(403).json({ success: false, message: 'You are not assigned to this order' });
         return;
       }
-      if (!['on_the_way', 'arrived', 'delivered'].includes(status)) {
+      if (!['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status)) {
         res.status(403).json({ success: false, message: 'Drivers can only update delivery status' });
         return;
       }
@@ -269,24 +249,74 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
       updateData.actualDelivery = new Date();
     }
 
+    // When restaurant marks ready_for_pickup, create delivery request + notify drivers
+    if (status === 'ready_for_pickup' && req.userRole === 'restaurant_owner') {
+      const restaurant = await prisma.restaurant.findUnique({ where: { id: order.restaurantId } });
+      const orderWithItems = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: { items: true },
+      });
+      if (restaurant && orderWithItems) {
+        const deliveryAddress = order.deliveryAddress as any;
+
+        const existingRequest = await prisma.deliveryRequest.findUnique({ where: { orderId: order.id } });
+        if (!existingRequest) {
+          await prisma.deliveryRequest.create({
+            data: {
+              orderId: order.id,
+              restaurant: {
+                name: restaurant.name,
+                address: restaurant.address,
+                image: restaurant.image,
+                location: restaurant.latitude && restaurant.longitude
+                  ? { latitude: restaurant.latitude, longitude: restaurant.longitude }
+                  : null,
+              },
+              customer: {
+                name: order.userId,
+                address: `${deliveryAddress?.street || ''}, ${deliveryAddress?.area || ''}, ${deliveryAddress?.city || ''}`,
+              },
+              pickup: restaurant.address,
+              dropoff: `${deliveryAddress?.street || ''}, ${deliveryAddress?.area || ''}, ${deliveryAddress?.city || ''}`,
+              distance: parseFloat(restaurant.distance.replace(/[^0-9.]/g, '')) || 0,
+              deliveryFee: order.deliveryFee,
+              items: orderWithItems.items.map((i: any) => `${i.quantity}x ${i.name}`),
+              timeLeft: 35,
+              status: 'available',
+            },
+          });
+        } else {
+          await prisma.deliveryRequest.update({
+            where: { orderId: order.id },
+            data: { status: 'available' },
+          });
+        }
+
+        // Notify all drivers
+        emitToRole('driver', 'delivery:available', {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+        });
+
+        // Also notify the restaurant owner that it's been broadcast
+        emitToUser(restaurant.ownerId, 'order:broadcast', {
+          orderId: order.id,
+          message: 'Order broadcasted to drivers',
+        });
+      }
+    }
+
     const updated = await prisma.order.update({
       where: { id: req.params.id as string },
       data: updateData,
       include: { items: true, restaurant: true },
     });
 
-    if (status === 'confirmed') {
-      await prisma.deliveryRequest.updateMany({
-        where: { orderId: order.id },
-        data: { status: 'available' },
-      });
-    }
-
     // Emit real-time update
     emitOrderUpdate(order.id, 'order:status', { status, orderId: order.id });
 
     try {
-      await sendPushNotification(order.userId, 'Order Update', `Your order #${order.orderNumber} is now ${status}`);
+      await sendPushNotification(order.userId, 'Order Update', `Your order #${order.orderNumber} is now ${status.replace(/_/g, ' ')}`);
     } catch { /* non-critical */ }
 
     res.json({ success: true, data: updated });
@@ -309,10 +339,10 @@ router.post('/:id/cancel', auth, role('customer'), async (req: AuthRequest, res:
       return;
     }
 
-    if (!['pending', 'confirmed'].includes(order.status)) {
+    if (!['pending', 'restaurant_accepted'].includes(order.status)) {
       res.status(400).json({
         success: false,
-        message: 'Orders can only be cancelled when pending or confirmed',
+        message: 'Orders can only be cancelled when pending or accepted by restaurant',
       });
       return;
     }
@@ -406,27 +436,6 @@ router.post('/:id/reorder', auth, role('customer'), async (req: AuthRequest, res
         estimatedDelivery,
       },
       include: { items: true, restaurant: true },
-    });
-
-    await prisma.deliveryRequest.create({
-      data: {
-        orderId: order.id,
-        restaurant: {
-          name: restaurant.name,
-          address: restaurant.address,
-          image: restaurant.image,
-        },
-        customer: {
-          name: req.userId!,
-          address: `${deliveryAddress.street}, ${deliveryAddress.area}, ${deliveryAddress.city}`,
-        },
-        pickup: restaurant.address,
-        dropoff: `${deliveryAddress.street}, ${deliveryAddress.area}, ${deliveryAddress.city}`,
-        distance: parseFloat(restaurant.distance.replace(/[^0-9.]/g, '')) || 0,
-        deliveryFee,
-        items: orderItemsData.map((i: any) => `${i.quantity}x ${i.name}`),
-        timeLeft: 35,
-      },
     });
 
     res.status(201).json({ success: true, data: order });
