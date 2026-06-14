@@ -16,8 +16,11 @@ enum UserRole {
 
 enum OrderStatus {
   pending
-  confirmed
+  restaurant_accepted
   preparing
+  ready_for_pickup
+  driver_assigned
+  picked_up
   on_the_way
   arrived
   delivered
@@ -85,6 +88,7 @@ model Restaurant {
   distance     String
   address      String
   isOpen       Boolean  @default(true)
+  isApproved   Boolean  @default(false)
   openingHours String?
   closingHours String?
   categories   Json     @default("[]")
@@ -108,7 +112,7 @@ model MenuItem {
   name          String
   description   String
   price         Float
-  image         String
+  image         String?
   category      String
   isAvailable   Boolean  @default(true)
   isPopular     Boolean  @default(false)
