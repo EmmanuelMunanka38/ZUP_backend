@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import prisma from '../db/prisma';
 import auth, { AuthRequest } from '../middleware/auth';
 import role from '../middleware/role';
+import { emitToUser, emitOrderUpdate } from '../socket';
+import { sendPushNotification } from '../services/notification.service';
 
 const router = Router();
 
@@ -13,7 +15,7 @@ router.get('/requests', auth, role('driver'), async (_req: AuthRequest, res: Res
     });
     res.json({ success: true, data: requests });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch requests' });
+    res.status(500).json({ success: false, message: 'Failed to fetch requests' });  
   }
 });
 
@@ -38,10 +40,31 @@ router.post('/requests/:id/accept', auth, role('driver'), async (req: AuthReques
       data: { status: 'accepted', driverId: req.userId },
     });
 
-    await prisma.order.update({
+    // Update order: set riderId and status to driver_assigned
+    const order = await prisma.order.update({
       where: { id: deliveryRequest.orderId },
-      data: { riderId: req.userId, status: 'preparing' },
+      data: { riderId: req.userId, status: 'driver_assigned' as any },
     });
+
+    // Notify restaurant that a driver accepted
+    const restaurant = await prisma.restaurant.findUnique({ where: { id: order.restaurantId } });
+    if (restaurant) {
+      emitToUser(restaurant.ownerId, 'order:driver_assigned', {
+        orderId: order.id,
+        driverId: req.userId,
+        message: 'A driver has accepted the delivery',
+      });
+    }
+
+    // Notify customer that a driver is assigned
+    emitOrderUpdate(order.id, 'order:status', {
+      status: 'driver_assigned',
+      orderId: order.id,
+    });
+
+    try {
+      await sendPushNotification(order.userId, 'Driver Assigned', 'A driver has been assigned to your order');
+    } catch { /* non-critical */ }
 
     res.json({ success: true, data: updated });
   } catch (error) {
@@ -67,11 +90,11 @@ router.get('/dashboard', auth, role('driver'), async (req: AuthRequest, res: Res
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const todayDeliveries = await prisma.deliveryRequest.findMany({
+    const todayDeliveries = await prisma.order.findMany({
       where: {
-        driverId: req.userId,
-        status: 'completed',
-        createdAt: { gte: today },
+        riderId: req.userId,
+        status: 'delivered',
+        actualDelivery: { gte: today },
       },
     });
 
@@ -81,23 +104,23 @@ router.get('/dashboard', auth, role('driver'), async (req: AuthRequest, res: Res
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const yesterdayDeliveries = await prisma.deliveryRequest.findMany({
+    const yesterdayDeliveries = await prisma.order.findMany({
       where: {
-        driverId: req.userId,
-        status: 'completed',
-        createdAt: { gte: yesterday, lt: today },
+        riderId: req.userId,
+        status: 'delivered',
+        actualDelivery: { gte: yesterday, lt: today },
       },
     });
 
     const yesterdayOrders = yesterdayDeliveries.length;
     const yesterdayRevenue = yesterdayDeliveries.reduce((sum: number, d: any) => sum + d.deliveryFee, 0);
 
-    const totalOrders = await prisma.deliveryRequest.count({
-      where: { driverId: req.userId, status: 'completed' },
+    const totalOrders = await prisma.order.count({
+      where: { riderId: req.userId, status: 'delivered' },
     });
 
-    const totalRevenueResult = await prisma.deliveryRequest.aggregate({
-      where: { driverId: req.userId, status: 'completed' },
+    const totalRevenueResult = await prisma.order.aggregate({
+      where: { riderId: req.userId, status: 'delivered' },
       _sum: { deliveryFee: true },
     });
 
