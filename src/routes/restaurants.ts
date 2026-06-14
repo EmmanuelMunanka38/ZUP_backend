@@ -4,8 +4,17 @@ import prisma from '../db/prisma';
 import auth, { AuthRequest } from '../middleware/auth';
 import role from '../middleware/role';
 import validate from '../middleware/validate';
+import { storage } from '../services/storage.service';
 
 const router = Router();
+
+const getUploadKeyFromUrl = (url?: string | null) => {
+  if (!url) return null;
+  const marker = '/uploads/';
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex === -1) return null;
+  return url.slice(markerIndex + marker.length).split('?')[0] || null;
+};
 
 const createRestaurantSchema = z.object({
   name: z.string().min(1),
@@ -18,6 +27,7 @@ const createRestaurantSchema = z.object({
   address: z.string().min(1),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  isApproved: z.boolean().optional(),
 });
 
 const updateRestaurantSchema = z.object({
@@ -40,7 +50,7 @@ const createMenuItemSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
   price: z.number().min(0),
-  image: z.string().min(1),
+  image: z.string().optional(),
   category: z.string().min(1),
   isAvailable: z.boolean().optional(),
   isPopular: z.boolean().optional(),
@@ -58,8 +68,16 @@ const updateMenuItemSchema = z.object({
 
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { cuisine, search, isOpen } = req.query;
+    const { cuisine, search, isOpen, ownerId } = req.query;
     const where: any = {};
+
+    // Public listing: show only approved restaurants
+    // If ownerId is provided, show that owner's restaurants regardless of approval
+    if (ownerId) {
+      where.ownerId = ownerId as string;
+    } else {
+      where.isApproved = true;
+    }
 
     if (cuisine) {
       where.cuisine = { contains: cuisine as string, mode: 'insensitive' };
@@ -86,7 +104,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 router.get('/featured', async (_req: Request, res: Response): Promise<void> => {
   try {
     const restaurants = await prisma.restaurant.findMany({
-      where: { isOpen: true },
+      where: { isApproved: true, isOpen: true },
       orderBy: { rating: 'desc' },
       take: 5,
     });
@@ -123,8 +141,12 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 
 router.get('/:id/menu', async (req: Request, res: Response): Promise<void> => {
   try {
+    const includeUnavailable = req.query.includeUnavailable === 'true';
     const menuItems = await prisma.menuItem.findMany({
-      where: { restaurantId: req.params.id as string, isAvailable: true },
+      where: {
+        restaurantId: req.params.id as string,
+        ...(includeUnavailable ? {} : { isAvailable: true }),
+      },
       orderBy: { category: 'asc' },
     });
     res.json({ success: true, data: menuItems });
@@ -230,6 +252,14 @@ router.delete('/menu/:menuId', auth, role('restaurant_owner'), async (req: AuthR
     }
 
     await prisma.menuItem.delete({ where: { id: req.params.menuId as string } });
+
+    const uploadKey = getUploadKeyFromUrl(menuItem.image);
+    if (uploadKey) {
+      storage.delete(uploadKey).catch((error) => {
+        console.error('Failed to delete menu item image:', error);
+      });
+    }
+
     res.json({ success: true, message: 'Menu item deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to delete menu item' });
