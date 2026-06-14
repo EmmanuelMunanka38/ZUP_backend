@@ -13,9 +13,12 @@ export const calculateFees = (subtotal: number, deliveryFee: number) => {
 };
 
 const ORDER_STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending: ['confirmed', 'cancelled'],
-  confirmed: ['preparing', 'cancelled'],
-  preparing: ['on_the_way'],
+  pending: ['restaurant_accepted', 'cancelled'],
+  restaurant_accepted: ['preparing', 'cancelled'],
+  preparing: ['ready_for_pickup', 'cancelled'],
+  ready_for_pickup: ['driver_assigned'],
+  driver_assigned: ['picked_up', 'cancelled'],
+  picked_up: ['on_the_way'],
   on_the_way: ['arrived'],
   arrived: ['delivered'],
   delivered: [],
@@ -29,14 +32,17 @@ export const isValidTransition = (from: string, to: string): boolean => {
 export const getStatusSteps = (currentStatus: string) => {
   const allSteps = [
     { key: 'pending', label: 'Order Placed' },
-    { key: 'confirmed', label: 'Order Confirmed' },
+    { key: 'restaurant_accepted', label: 'Restaurant Accepted' },
     { key: 'preparing', label: 'Preparing' },
+    { key: 'ready_for_pickup', label: 'Ready for Pickup' },
+    { key: 'driver_assigned', label: 'Driver Assigned' },
+    { key: 'picked_up', label: 'Picked Up' },
     { key: 'on_the_way', label: 'On the Way' },
     { key: 'arrived', label: 'Arrived' },
     { key: 'delivered', label: 'Delivered' },
   ];
 
-  const statusOrder = ['pending', 'confirmed', 'preparing', 'on_the_way', 'arrived', 'delivered'];
+  const statusOrder = ['pending', 'restaurant_accepted', 'preparing', 'ready_for_pickup', 'driver_assigned', 'picked_up', 'on_the_way', 'arrived', 'delivered'];
   const currentIdx = statusOrder.indexOf(currentStatus);
 
   return allSteps.map((step, i) => ({
