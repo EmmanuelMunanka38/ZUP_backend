@@ -87,6 +87,7 @@ export const verifyOtpCode = async (
   code: string,
   name?: string,
   rememberMe?: boolean,
+  role?: string,
 ): Promise<{ user: any; accessToken: string; refreshToken: string } | null> => {
   const cleanEmail = email.trim().toLowerCase();
   const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
@@ -99,13 +100,14 @@ export const verifyOtpCode = async (
 
   const updateData: any = { otpCode: null, otpExpiresAt: null };
   if (name) updateData.name = name;
+  if (role) updateData.role = role;
 
   const updatedUser = await prisma.user.update({
     where: { id: user.id },
     data: updateData,
   });
 
-  const tokens = await generateTokens(user.id, user.role, rememberMe);
+  const tokens = await generateTokens(updatedUser.id, updatedUser.role, rememberMe);
 
   return {
     user: sanitizeUser(updatedUser),
