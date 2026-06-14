@@ -49,6 +49,9 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
       },
     });
   } else {
+    if (config.nodeEnv === 'production') {
+      throw new Error('EMAIL_USER and EMAIL_PASS must be configured in production');
+    }
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
@@ -59,7 +62,7 @@ export const sendOtpEmail = async (to: string, otp: string): Promise<void> => {
         pass: testAccount.pass,
       },
     });
-    console.log(`[EMAIL] Ethereal test account created: ${testAccount.user}`);
+    console.log(`[EMAIL] Dev mode: using Ethereal test account: ${testAccount.user}`);
   }
 
   const html = buildOtpHtml(otp);
