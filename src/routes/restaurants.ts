@@ -48,7 +48,7 @@ const updateRestaurantSchema = z.object({
 
 const createMenuItemSchema = z.object({
   name: z.string().min(1),
-  description: z.string().min(1),
+  description: z.string().optional(),
   price: z.number().min(0),
   image: z.string().optional(),
   category: z.string().min(1),
@@ -155,11 +155,11 @@ router.get('/:id/menu', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/', auth, role('restaurant_owner'), validate(createRestaurantSchema), async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const restaurant = await prisma.restaurant.create({
-      data: { ...req.body, ownerId: req.userId! },
-    });
+  router.post('/', auth, role('restaurant_owner'), validate(createRestaurantSchema), async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const restaurant = await prisma.restaurant.create({
+        data: { ...req.body, isApproved: true, ownerId: req.userId! },
+      });
     res.status(201).json({ success: true, data: restaurant });
   } catch (error) {
     console.error('Create restaurant error:', error);

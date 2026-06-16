@@ -88,7 +88,7 @@ model Restaurant {
   distance     String
   address      String
   isOpen       Boolean  @default(true)
-  isApproved   Boolean  @default(false)
+  isApproved   Boolean  @default(true)
   openingHours String?
   closingHours String?
   categories   Json     @default("[]")
