@@ -325,6 +325,95 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
   }
 });
 
+router.put('/:id/assign-driver', auth, role('restaurant_owner'), validate(z.object({ driverId: z.string().uuid() })), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { driverId } = req.body;
+    const order = await prisma.order.findUnique({ where: { id: req.params.id as string } });
+
+    if (!order) {
+      res.status(404).json({ success: false, message: 'Order not found' });
+      return;
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({ where: { id: order.restaurantId } });
+    if (!restaurant || restaurant.ownerId !== req.userId) {
+      res.status(403).json({ success: false, message: 'You can only assign drivers to your own orders' });
+      return;
+    }
+
+    if (order.status !== 'restaurant_accepted' && order.status !== 'ready_for_pickup') {
+      res.status(400).json({ success: false, message: 'Order must be accepted before assigning a driver' });
+      return;
+    }
+
+    const driver = await prisma.user.findUnique({ where: { id: driverId } });
+    if (!driver || driver.role !== 'driver') {
+      res.status(400).json({ success: false, message: 'Invalid driver' });
+      return;
+    }
+
+    const orderWithItems = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: { items: true },
+    });
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { riderId: driverId, status: 'driver_assigned' },
+    });
+
+    const deliveryAddress = order.deliveryAddress as any;
+    const deliveryRequest = await prisma.deliveryRequest.upsert({
+      where: { orderId: order.id },
+      update: { driverId, status: 'accepted' },
+      create: {
+        orderId: order.id,
+        driverId,
+        status: 'accepted',
+        restaurant: {
+          name: restaurant.name,
+          address: restaurant.address,
+          image: restaurant.image,
+          location: restaurant.latitude && restaurant.longitude
+            ? { latitude: restaurant.latitude, longitude: restaurant.longitude }
+            : null,
+          phone: driver.phone || null,
+        },
+        customer: {
+          name: order.userId,
+          address: `${deliveryAddress?.street || ''}, ${deliveryAddress?.area || ''}, ${deliveryAddress?.city || ''}`,
+        },
+        pickup: restaurant.address,
+        dropoff: `${deliveryAddress?.street || ''}, ${deliveryAddress?.area || ''}, ${deliveryAddress?.city || ''}`,
+        distance: parseFloat(restaurant.distance.replace(/[^0-9.]/g, '')) || 0,
+        deliveryFee: order.deliveryFee,
+        items: orderWithItems?.items.map((i: any) => `${i.quantity}x ${i.name}`) || [],
+        timeLeft: 35,
+      },
+    });
+
+    emitToUser(driverId, 'delivery:assigned', deliveryRequest);
+
+    emitOrderUpdate(order.id, 'order:status', { status: 'driver_assigned', orderId: order.id });
+
+    try {
+      await sendPushNotification(driverId, 'New Delivery Assignment', `You have been assigned to order #${order.orderNumber}`);
+      await sendPushNotification(order.userId, 'Driver Assigned', 'A driver has been assigned to your order');
+    } catch { /* non-critical */ }
+
+    emitToUser(restaurant.ownerId, 'order:driver_assigned', {
+      orderId: order.id,
+      driverId,
+      message: 'Driver assigned successfully',
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Assign driver error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign driver' });
+  }
+});
+
 router.post('/:id/cancel', auth, role('customer'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const order = await prisma.order.findUnique({ where: { id: req.params.id as string } });

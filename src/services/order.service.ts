@@ -14,7 +14,7 @@ export const calculateFees = (subtotal: number, deliveryFee: number) => {
 
 const ORDER_STATUS_TRANSITIONS: Record<string, string[]> = {
   pending: ['restaurant_accepted', 'cancelled'],
-  restaurant_accepted: ['preparing', 'cancelled'],
+  restaurant_accepted: ['preparing', 'driver_assigned', 'cancelled'],
   preparing: ['ready_for_pickup', 'cancelled'],
   ready_for_pickup: ['driver_assigned'],
   driver_assigned: ['picked_up', 'cancelled'],
