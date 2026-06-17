@@ -34,8 +34,8 @@ const updateProfileSchema = z.object({
 
 router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: Response): Promise<void> => {
   try {
-    const { email, phone } = req.body;
-    await authService.createOtpRecord(email, phone);
+    const { email, phone, role } = req.body;
+    await authService.createOtpRecord(email, phone, role);
     res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -46,7 +46,7 @@ router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: R
 router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), async (req, res: Response): Promise<void> => {
   try {
     const { email, code, name, rememberMe, role } = req.body;
-    const result = await authService.verifyOtpCode(email, code, name, role);
+    const result = await authService.verifyOtpCode(email, code, name, rememberMe, role);
 
     if (!result) {
       res.status(400).json({

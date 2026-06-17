@@ -23,20 +23,22 @@ const detectRole = (phone: string): { role: 'customer' | 'driver' | 'restaurant_
   return { role: 'customer', cleanPhone: phone };
 };
 
-export const createOtpRecord = async (email: string, phone: string): Promise<string> => {
+export const createOtpRecord = async (email: string, phone: string, role?: string): Promise<string> => {
   const otp = generateOtp();
   const hashedOtp = await hashOtp(otp);
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   const cleanEmail = email.trim().toLowerCase();
   const rawPhone = phone.replace(/[\s-]/g, '');
-  const { role, cleanPhone } = detectRole(rawPhone);
+  const detected = detectRole(rawPhone);
+  const userRole: 'customer' | 'driver' | 'restaurant_owner' = role as any || detected.role;
+  const cleanPhone = detected.cleanPhone;
 
   try {
     await prisma.user.upsert({
       where: { email: cleanEmail },
       update: { otpCode: hashedOtp, otpExpiresAt },
-      create: { email: cleanEmail, phone: cleanPhone, name: '', role, otpCode: hashedOtp, otpExpiresAt },
+      create: { email: cleanEmail, phone: cleanPhone, name: '', role: userRole, otpCode: hashedOtp, otpExpiresAt },
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
