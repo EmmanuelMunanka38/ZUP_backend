@@ -251,10 +251,13 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
 
     // When restaurant marks ready_for_pickup, create delivery request + notify drivers
     if (status === 'ready_for_pickup' && req.userRole === 'restaurant_owner') {
-      const restaurant = await prisma.restaurant.findUnique({ where: { id: order.restaurantId } });
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: order.restaurantId },
+        include: { owner: { select: { phone: true, name: true } } },
+      });
       const orderWithItems = await prisma.order.findUnique({
         where: { id: order.id },
-        include: { items: true },
+        include: { items: true, user: { select: { name: true, phone: true } } },
       });
       if (restaurant && orderWithItems) {
         const deliveryAddress = order.deliveryAddress as any;
@@ -268,12 +271,14 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
                 name: restaurant.name,
                 address: restaurant.address,
                 image: restaurant.image,
+                phone: restaurant.owner.phone || null,
                 location: restaurant.latitude && restaurant.longitude
                   ? { latitude: restaurant.latitude, longitude: restaurant.longitude }
                   : null,
               },
               customer: {
-                name: order.userId,
+                name: orderWithItems.user.name || 'Customer',
+                phone: orderWithItems.user.phone || null,
                 address: `${deliveryAddress?.street || ''}, ${deliveryAddress?.area || ''}, ${deliveryAddress?.city || ''}`,
               },
               pickup: restaurant.address,
@@ -354,7 +359,7 @@ router.put('/:id/assign-driver', auth, role('restaurant_owner'), validate(z.obje
 
     const orderWithItems = await prisma.order.findUnique({
       where: { id: order.id },
-      include: { items: true },
+      include: { items: true, user: { select: { name: true, phone: true } } },
     });
 
     const updated = await prisma.order.update({
@@ -374,13 +379,14 @@ router.put('/:id/assign-driver', auth, role('restaurant_owner'), validate(z.obje
           name: restaurant.name,
           address: restaurant.address,
           image: restaurant.image,
+          phone: restaurant.owner?.phone || null,
           location: restaurant.latitude && restaurant.longitude
             ? { latitude: restaurant.latitude, longitude: restaurant.longitude }
             : null,
-          phone: driver.phone || null,
         },
         customer: {
-          name: order.userId,
+          name: orderWithItems?.user.name || 'Customer',
+          phone: orderWithItems?.user.phone || null,
           address: `${deliveryAddress?.street || ''}, ${deliveryAddress?.area || ''}, ${deliveryAddress?.city || ''}`,
         },
         pickup: restaurant.address,
