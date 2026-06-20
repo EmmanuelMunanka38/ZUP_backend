@@ -1,10 +1,16 @@
 import rateLimit from 'express-rate-limit';
+import { Request } from 'express';
+
+const emailKeyGenerator = (req: Request): string => {
+  return req.body?.email || req.ip || 'unknown';
+};
 
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => req.ip || 'unknown',
   message: { success: false, message: 'Too many requests, please try again later.' },
 });
 
@@ -13,6 +19,7 @@ export const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: emailKeyGenerator,
   message: { success: false, message: 'Too many auth attempts, please try again later.' },
 });
 
@@ -21,5 +28,6 @@ export const otpLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: emailKeyGenerator,
   message: { success: false, message: 'Too many OTP requests. Please wait before trying again.' },
 });
