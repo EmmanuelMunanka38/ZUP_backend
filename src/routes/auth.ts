@@ -38,24 +38,13 @@ router.post('/send-otp', otpLimiter, validate(sendOtpSchema), async (req, res: R
     await authService.createOtpRecord(email, phone, role);
     res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
-    console.error('Send OTP error:', error);
-    res.status(500).json({ success: false, message: 'Failed to send OTP' });
-  }
-});
-/*
- * Cleanning the Route fro the clean auth service to solve ERRO: FAILED TO SEND OTP
- cleanning the catch broke below: 
- {
-  catch (error) {
     console.error('Core Send OTP Database Error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to initialize OTP request. Please try again.' 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to initialize OTP request. Please try again.',
     });
   }
 });
- }
- */
 
 router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), async (req, res: Response): Promise<void> => {
   try {
