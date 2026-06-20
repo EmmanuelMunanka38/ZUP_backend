@@ -69,6 +69,74 @@ export const createOtpRecord = async (email: string, phone: string, role?: strin
   return otp;
 };
 
+/*
+*New and better way to handle user creating to prevent Erro:FAILED TO SEND OTP
+CODE:
+
+/after create otpRecode/=>following  :
+/! check if user exist first 
+by prisma.user.findFirst({
+  where: {
+      OR: [
+        { email: cleanEmail },
+        { phone: cleanPhone }
+      ]
+    }
+});
+
+/if user exist udate the otp by refering to the userId 
+that is : prisma.user.update (where:{id:userID},
+data:{otpcode:hashedOtp,otpExpiresAt })
+};
+
+/if the user does not exist at all create a user inside try catch broke
+try {
+      await prisma.user.create({
+        data: { 
+          email: cleanEmail, 
+          phone: cleanPhone, 
+          name: '', 
+          role: userRole, 
+          otpCode: hashedOtp, 
+          otpExpiresAt 
+        },
+      });
+      } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const userRetry = await prisma.user.findFirst({
+          where: { OR: [{ email: cleanEmail }, { phone: cleanPhone }] }
+        });
+        if (userRetry) {
+          await prisma.user.update({
+            where: { id: userRetry.id },
+            data: { otpCode: hashedOtp, otpExpiresAt },
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    }
+  }
+*we need to ensure that is present on the clean code base 
+  Additional promise : 
+  Promise.resolve().then(async () => {
+    try {
+      await sendOtpEmail(cleanEmail, otp);
+      if (config.isDev) console.log(`[DEV] OTP sent to ${cleanEmail}: ${otp}`);
+    } catch (emailError) {
+
+      console.error(`[BACKGROUND EMAIL ERROR] Failed delivering to ${cleanEmail}:`, emailError);
+    }
+  });
+
+
+  return otp;
+};
+
+*/
+
 export const verifyOtpCode = async (
   email: string,
   code: string,
