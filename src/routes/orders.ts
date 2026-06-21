@@ -222,7 +222,9 @@ router.put('/:id/status', auth, role('restaurant_owner', 'driver'), validate(upd
     }
 
     if (req.userRole === 'restaurant_owner') {
-      const restaurant = await prisma.restaurant.findUnique({ where: { id: order.restaurantId } });
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: order.restaurantId },
+    }) as any;
       if (!restaurant || restaurant.ownerId !== req.userId) {
         res.status(403).json({ success: false, message: 'You can only update orders for your own restaurant' });
         return;
@@ -351,6 +353,7 @@ router.put('/:id/assign-driver', auth, role('restaurant_owner'), validate(z.obje
       return;
     }
 
+    const owner = await prisma.user.findUnique({ where: { id: restaurant.ownerId }, select: { phone: true } });
     const driver = await prisma.user.findUnique({ where: { id: driverId } });
     if (!driver || driver.role !== 'driver') {
       res.status(400).json({ success: false, message: 'Invalid driver' });
@@ -379,7 +382,7 @@ router.put('/:id/assign-driver', auth, role('restaurant_owner'), validate(z.obje
           name: restaurant.name,
           address: restaurant.address,
           image: restaurant.image,
-          phone: restaurant.owner?.phone || null,
+          phone: owner?.phone || null,
           location: restaurant.latitude && restaurant.longitude
             ? { latitude: restaurant.latitude, longitude: restaurant.longitude }
             : null,
